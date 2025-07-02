@@ -1,0 +1,479 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Tender API Testing Interface</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            background: rgba(255, 255, 255, 0.95);
+            border-radius: 20px;
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.1);
+            overflow: hidden;
+            backdrop-filter: blur(10px);
+        }
+
+        .header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 30px;
+            text-align: center;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .header::before {
+            content: '';
+            position: absolute;
+            top: -50%;
+            left: -50%;
+            width: 200%;
+            height: 200%;
+            background: radial-gradient(circle, rgba(255,255,255,0.1) 0%, transparent 70%);
+            animation: pulse 4s ease-in-out infinite;
+        }
+
+        @keyframes pulse {
+            0%, 100% { transform: scale(1); opacity: 0.5; }
+            50% { transform: scale(1.1); opacity: 0.8; }
+        }
+
+        .header h1 {
+            font-size: 2.5rem;
+            margin-bottom: 10px;
+            position: relative;
+            z-index: 1;
+        }
+
+        .header p {
+            font-size: 1.2rem;
+            opacity: 0.9;
+            position: relative;
+            z-index: 1;
+        }
+
+        .main-content {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 30px;
+            padding: 30px;
+        }
+
+        .testing-panel {
+            background: white;
+            border-radius: 15px;
+            padding: 25px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
+            transition: transform 0.3s ease, box-shadow 0.3s ease;
+        }
+
+        .testing-panel:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 15px 40px rgba(0, 0, 0, 0.15);
+        }
+
+        .panel-header {
+            display: flex;
+            align-items: center;
+            margin-bottom: 20px;
+            padding-bottom: 15px;
+            border-bottom: 2px solid #f0f0f0;
+        }
+
+        .panel-icon {
+            font-size: 2rem;
+            margin-right: 15px;
+            color: #667eea;
+        }
+
+        .panel-title {
+            font-size: 1.5rem;
+            font-weight: 600;
+            color: #333;
+        }
+
+        .form-group {
+            margin-bottom: 20px;
+        }
+
+        .form-label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: 500;
+            color: #555;
+        }
+
+        .form-input, .form-select {
+            width: 100%;
+            padding: 12px 15px;
+            border: 2px solid #e0e0e0;
+            border-radius: 10px;
+            font-size: 1rem;
+            transition: border-color 0.3s ease, box-shadow 0.3s ease;
+        }
+
+        .form-input:focus, .form-select:focus {
+            outline: none;
+            border-color: #667eea;
+            box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+        }
+
+        .btn {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            padding: 12px 25px;
+            border-radius: 10px;
+            font-size: 1rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: transform 0.3s ease, box-shadow 0.3s ease;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 25px rgba(102, 126, 234, 0.3);
+        }
+
+        .btn:active {
+            transform: translateY(0);
+        }
+
+        .btn::before {
+            content: '';
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            width: 0;
+            height: 0;
+            background: rgba(255, 255, 255, 0.2);
+            border-radius: 50%;
+            transform: translate(-50%, -50%);
+            transition: width 0.6s, height 0.6s;
+        }
+
+        .btn:active::before {
+            width: 300px;
+            height: 300px;
+        }
+
+        .btn-secondary {
+            background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+        }
+
+        .btn-success {
+            background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
+        }
+
+        .results-panel {
+            background: white;
+            border-radius: 15px;
+            padding: 25px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
+            max-height: 600px;
+            overflow-y: auto;
+        }
+
+        .results-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 20px;
+            padding-bottom: 15px;
+            border-bottom: 2px solid #f0f0f0;
+        }
+
+        .results-content {
+            background: #f8f9fa;
+            border-radius: 10px;
+            padding: 20px;
+            font-family: 'Monaco', 'Menlo', 'Ubuntu Mono', monospace;
+            font-size: 0.9rem;
+            line-height: 1.6;
+            white-space: pre-wrap;
+            word-wrap: break-word;
+        }
+
+        .loading {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 40px;
+            color: #667eea;
+        }
+
+        .spinner {
+            width: 40px;
+            height: 40px;
+            border: 4px solid #f3f3f3;
+            border-top: 4px solid #667eea;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+            margin-right: 15px;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        .status-indicator {
+            display: inline-block;
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            margin-right: 8px;
+        }
+
+        .status-success { background-color: #28a745; }
+        .status-error { background-color: #dc3545; }
+        .status-warning { background-color: #ffc107; }
+
+        .platform-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 15px;
+            margin-bottom: 20px;
+        }
+
+        .platform-card {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 20px;
+            border-radius: 12px;
+            text-align: center;
+            cursor: pointer;
+            transition: transform 0.3s ease, box-shadow 0.3s ease;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .platform-card:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 10px 25px rgba(102, 126, 234, 0.3);
+        }
+
+        .platform-card.active {
+            background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
+        }
+
+        .platform-card::before {
+            content: '';
+            position: absolute;
+            top: -50%;
+            left: -50%;
+            width: 200%;
+            height: 200%;
+            background: radial-gradient(circle, rgba(255,255,255,0.1) 0%, transparent 70%);
+            transform: scale(0);
+            transition: transform 0.6s ease;
+        }
+
+        .platform-card:hover::before {
+            transform: scale(1);
+        }
+
+        .platform-name {
+            font-size: 1.1rem;
+            font-weight: 600;
+            margin-bottom: 5px;
+            position: relative;
+            z-index: 1;
+        }
+
+        .platform-status {
+            font-size: 0.9rem;
+            opacity: 0.9;
+            position: relative;
+            z-index: 1;
+        }
+
+        .quick-actions {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 20px;
+            flex-wrap: wrap;
+        }
+
+        .quick-btn {
+            padding: 8px 16px;
+            font-size: 0.9rem;
+            border-radius: 20px;
+            border: 2px solid #667eea;
+            background: transparent;
+            color: #667eea;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .quick-btn:hover {
+            background: #667eea;
+            color: white;
+        }
+
+        @media (max-width: 768px) {
+            .main-content {
+                grid-template-columns: 1fr;
+                gap: 20px;
+                padding: 20px;
+            }
+            
+            .header h1 {
+                font-size: 2rem;
+            }
+            
+            .platform-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        .error-message {
+            background: #f8d7da;
+            color: #721c24;
+            padding: 15px;
+            border-radius: 10px;
+            margin: 10px 0;
+            border-left: 4px solid #dc3545;
+        }
+
+        .success-message {
+            background: #d4edda;
+            color: #155724;
+            padding: 15px;
+            border-radius: 10px;
+            margin: 10px 0;
+            border-left: 4px solid #28a745;
+        }
+
+        .info-message {
+            background: #d1ecf1;
+            color: #0c5460;
+            padding: 15px;
+            border-radius: 10px;
+            margin: 10px 0;
+            border-left: 4px solid #17a2b8;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1><i class="fas fa-rocket"></i> Tender API Testing Interface</h1>
+            <p>Test all platforms and endpoints with real-time results</p>
+        </div>
+
+        <div class="main-content">
+            <!-- Testing Panel -->
+            <div class="testing-panel">
+                <div class="panel-header">
+                    <i class="fas fa-cogs panel-icon"></i>
+                    <h2 class="panel-title">API Testing</h2>
+                </div>
+
+                <!-- Platform Selection -->
+                <div class="platform-grid" id="platformGrid">
+                    <!-- Platforms will be loaded dynamically -->
+                </div>
+
+                <!-- Quick Actions -->
+                <div class="quick-actions">
+                    <button class="quick-btn" onclick="testHealth()">
+                        <i class="fas fa-heartbeat"></i> Health Check
+                    </button>
+                    <button class="quick-btn" onclick="testAllPlatforms()">
+                        <i class="fas fa-globe"></i> Test All
+                    </button>
+                    <button class="quick-btn" onclick="clearResults()">
+                        <i class="fas fa-trash"></i> Clear
+                    </button>
+                </div>
+
+                <!-- Search Form -->
+                <form id="searchForm">
+                    <div class="form-group">
+                        <label class="form-label">Selected Platform:</label>
+                        <select class="form-select" id="platformSelect" required>
+                            <option value="">Select a platform...</option>
+                        </select>
+                    </div>
+
+                    <div class="form-group">
+                        <label class="form-label">Organization:</label>
+                        <input type="text" class="form-input" id="organization" placeholder="e.g., California, Los Angeles">
+                    </div>
+
+                    <div class="form-group">
+                        <label class="form-label">Keywords:</label>
+                        <input type="text" class="form-input" id="keywords" placeholder="e.g., construction, IT services">
+                    </div>
+
+                    <div class="form-group">
+                        <label class="form-label">Status:</label>
+                        <select class="form-select" id="status">
+                            <option value="">All statuses</option>
+                            <option value="active">Active</option>
+                            <option value="open">Open</option>
+                            <option value="closed">Closed</option>
+                        </select>
+                    </div>
+
+                    <div class="form-group">
+                        <label class="form-label">Limit:</label>
+                        <input type="number" class="form-input" id="limit" value="10" min="1" max="100">
+                    </div>
+
+                    <button type="submit" class="btn">
+                        <i class="fas fa-search"></i> Search Tenders
+                    </button>
+                </form>
+            </div>
+
+            <!-- Results Panel -->
+            <div class="results-panel">
+                <div class="results-header">
+                    <h3><i class="fas fa-chart-line"></i> Results</h3>
+                    <div id="statusIndicator">
+                        <span class="status-indicator status-warning"></span>
+                        <span>Ready</span>
+                    </div>
+                </div>
+                <div class="results-content" id="resultsContent">
+                    <div class="info-message">
+                        <i class="fas fa-info-circle"></i> 
+                        Welcome to Tender API Testing Interface!
+                        
+                        • Select a platform from the cards above
+                        • Fill in search parameters (optional)
+                        • Click "Search Tenders" to test the API
+                        • Use quick actions for health checks
+                        
+                        Available platforms: TED Europe, SAM.gov, Bonfire
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="/static/script.js"></script>
+    <script src="/static/advanced.js"></script>
+</body>
+</html>
+

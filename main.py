@@ -1,17 +1,33 @@
 from fastapi import FastAPI, HTTPException
+from fastapi.staticfiles import StaticFiles
+from fastapi.responses import FileResponse
 from typing import Dict, Any, Optional
 import asyncio
+import os
 from base.models import TenderResponse
 from platforms import get_platform, get_all_platforms, REGISTERED_PLATFORMS
 
 app = FastAPI(
     title="Modular Tender API",
-    description="Scalable multi-platform tender search API",
+    description="Scalable multi-platform tender search API with Testing Interface",
     version="2.0.0"
 )
 
+# Mount static files for testing interface
+if os.path.exists("static"):
+    app.mount("/static", StaticFiles(directory="static"), name="static")
+
 @app.get("/")
-async def root():
+async def testing_interface():
+    """Serve the testing interface"""
+    if os.path.exists("static/index.html"):
+        return FileResponse("static/index.html")
+    else:
+        # Fallback to API info if no testing interface
+        return await api_info()
+
+@app.get("/api")
+async def api_info():
     """API info with auto-discovered platforms"""
     platforms = list(REGISTERED_PLATFORMS.keys())
     return {
@@ -24,25 +40,51 @@ async def root():
         } | {
             "/search/all": "Search all platforms",
             "/platforms": "Platform information",
-            "/docs": "API documentation"
+            "/docs": "API documentation",
+            "/": "Testing interface"
         }
     }
 
 @app.get("/platforms")
 async def get_platforms_info():
     """Get information about all registered platforms"""
-    platforms_info = {}
+    platforms_list = []
     
     for name, platform_class in REGISTERED_PLATFORMS.items():
-        instance = platform_class()
-        platforms_info[name] = {
-            "name": instance.platform_name,
-            "base_url": instance.base_url,
-            "auth_requirements": instance.get_auth_requirements(),
-            "search_params": instance.get_search_params_schema()
-        }
+        try:
+            instance = platform_class()
+            auth_req = instance.get_auth_requirements()
+            
+            # Determine status
+            status = "healthy"
+            if auth_req.get("required"):
+                import os
+                env_var = auth_req.get("env_var")
+                if env_var and os.getenv(env_var, "").startswith("YOUR_"):
+                    status = "needs_configuration"
+            
+            platforms_list.append({
+                "name": name,
+                "display_name": instance.platform_name,
+                "base_url": instance.base_url,
+                "status": status,
+                "auth_requirements": auth_req,
+                "search_params": instance.get_search_params_schema()
+            })
+            
+        except Exception as e:
+            platforms_list.append({
+                "name": name,
+                "display_name": name.upper(),
+                "base_url": "unknown",
+                "status": "error",
+                "error": str(e)
+            })
     
-    return platforms_info
+    return {
+        "platforms": platforms_list,
+        "total": len(platforms_list)
+    }
 
 @app.post("/search/{platform_name}")
 async def search_platform(platform_name: str, search_params: Dict[str, Any]):

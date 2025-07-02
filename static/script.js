@@ -183,6 +183,17 @@ class TenderAPITester {
         const limit = parseInt(document.getElementById('limit').value);
         if (limit && limit > 0) params.limit = limit;
         
+        // Add required date fields for SAM.gov platform
+        const selectedPlatform = document.getElementById('platformSelect').value;
+        if (selectedPlatform === 'sam') {
+            // SAM.gov requires posted_from and posted_to dates
+            const today = new Date();
+            const thirtyDaysAgo = new Date(today.getTime() - (30 * 24 * 60 * 60 * 1000));
+            
+            params.posted_from = thirtyDaysAgo.toISOString().split('T')[0]; // YYYY-MM-DD format
+            params.posted_to = today.toISOString().split('T')[0]; // YYYY-MM-DD format
+        }
+        
         return params;
     }
 
@@ -216,12 +227,24 @@ class TenderAPITester {
         
         for (const platform of this.platforms) {
             try {
+                // Prepare platform-specific parameters
+                let testParams = { limit: 1 };
+                
+                // Add required date fields for SAM.gov
+                if (platform.name === 'sam') {
+                    const today = new Date();
+                    const thirtyDaysAgo = new Date(today.getTime() - (30 * 24 * 60 * 60 * 1000));
+                    
+                    testParams.posted_from = thirtyDaysAgo.toISOString().split('T')[0];
+                    testParams.posted_to = today.toISOString().split('T')[0];
+                }
+                
                 const response = await fetch(`${this.baseURL}/search/${platform.name}`, {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json',
                     },
-                    body: JSON.stringify({ limit: 1 })
+                    body: JSON.stringify(testParams)
                 });
                 
                 const data = await response.json();

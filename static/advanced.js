@@ -564,6 +564,163 @@ class AdvancedTesterUI {
     }
 }
 
+// Static methods for advanced testing
+class AdvancedTester {
+    static async benchmarkPlatform(platform, iterations) {
+        const results = [];
+        const baseURL = window.location.origin;
+        
+        for (let i = 1; i <= iterations; i++) {
+            const startTime = Date.now();
+            
+            try {
+                // Prepare platform-specific parameters
+                let testParams = { limit: 5 };
+                
+                // Add required date fields for SAM.gov
+                if (platform === 'sam') {
+                    const today = new Date();
+                    const thirtyDaysAgo = new Date(today.getTime() - (30 * 24 * 60 * 60 * 1000));
+                    
+                    testParams.posted_from = thirtyDaysAgo.toISOString().split('T')[0];
+                    testParams.posted_to = today.toISOString().split('T')[0];
+                }
+                
+                const response = await fetch(`${baseURL}/search/${platform}`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify(testParams)
+                });
+                
+                const endTime = Date.now();
+                const responseTime = endTime - startTime;
+                
+                const data = await response.json();
+                
+                results.push({
+                    iteration: i,
+                    response_time: responseTime,
+                    status: response.ok ? 'success' : 'error',
+                    result_count: data.total_count || 0,
+                    error: response.ok ? null : data.detail || 'Unknown error'
+                });
+                
+            } catch (error) {
+                const endTime = Date.now();
+                const responseTime = endTime - startTime;
+                
+                results.push({
+                    iteration: i,
+                    response_time: responseTime,
+                    status: 'error',
+                    result_count: 0,
+                    error: error.message
+                });
+            }
+        }
+        
+        // Calculate summary statistics
+        const successfulResults = results.filter(r => r.status === 'success');
+        const averageResponseTime = successfulResults.length > 0 
+            ? successfulResults.reduce((sum, r) => sum + r.response_time, 0) / successfulResults.length 
+            : 0;
+        const successRate = (successfulResults.length / iterations) * 100;
+        const totalResults = successfulResults.reduce((sum, r) => sum + r.result_count, 0);
+        
+        return {
+            platform,
+            iterations,
+            results,
+            average_response_time: Math.round(averageResponseTime * 100) / 100,
+            success_rate: Math.round(successRate * 100) / 100,
+            total_results: totalResults
+        };
+    }
+    
+    static async stressTest(platform, concurrent) {
+        const baseURL = window.location.origin;
+        const promises = [];
+        
+        // Prepare platform-specific parameters
+        let testParams = { limit: 3 };
+        
+        // Add required date fields for SAM.gov
+        if (platform === 'sam') {
+            const today = new Date();
+            const thirtyDaysAgo = new Date(today.getTime() - (30 * 24 * 60 * 60 * 1000));
+            
+            testParams.posted_from = thirtyDaysAgo.toISOString().split('T')[0];
+            testParams.posted_to = today.toISOString().split('T')[0];
+        }
+        
+        // Create concurrent requests
+        for (let i = 1; i <= concurrent; i++) {
+            const promise = (async (requestId) => {
+                const startTime = Date.now();
+                
+                try {
+                    const response = await fetch(`${baseURL}/search/${platform}`, {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                        },
+                        body: JSON.stringify(testParams)
+                    });
+                    
+                    const endTime = Date.now();
+                    const responseTime = endTime - startTime;
+                    
+                    const data = await response.json();
+                    
+                    return {
+                        request_id: requestId,
+                        response_time: responseTime,
+                        status: response.ok ? 'success' : 'error',
+                        result_count: data.total_count || 0,
+                        error: response.ok ? null : data.detail || 'Unknown error'
+                    };
+                    
+                } catch (error) {
+                    const endTime = Date.now();
+                    const responseTime = endTime - startTime;
+                    
+                    return {
+                        request_id: requestId,
+                        response_time: responseTime,
+                        status: 'error',
+                        result_count: 0,
+                        error: error.message
+                    };
+                }
+            })(i);
+            
+            promises.push(promise);
+        }
+        
+        // Wait for all requests to complete
+        const results = await Promise.all(promises);
+        
+        // Calculate summary statistics
+        const successfulResults = results.filter(r => r.status === 'success');
+        const averageResponseTime = results.length > 0 
+            ? results.reduce((sum, r) => sum + r.response_time, 0) / results.length 
+            : 0;
+        const successRate = (successfulResults.length / concurrent) * 100;
+        const failedRequests = results.filter(r => r.status === 'error').length;
+        
+        return {
+            platform,
+            concurrent_requests: concurrent,
+            results,
+            average_response_time: Math.round(averageResponseTime * 100) / 100,
+            success_rate: Math.round(successRate * 100) / 100,
+            failed_requests: failedRequests
+        };
+    }
+}
+
 // Initialize advanced tester when DOM is loaded
 document.addEventListener('DOMContentLoaded', () => {
     window.advancedTester = new AdvancedTesterUI();

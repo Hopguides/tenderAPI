@@ -73,6 +73,7 @@ class TEDPlatform(BasePlatform):
                 return TenderResponse(
                     platform=self.platform_name,
                     total_count=data.get("totalCount", 0),
+                    tenders=[],  # Will be populated from results via backward compatibility
                     results=results,
                     query_info={
                         "search_params": search_request.dict(exclude_none=True),

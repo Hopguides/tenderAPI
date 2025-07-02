@@ -8,7 +8,7 @@ import os
 import time
 import logging
 from datetime import datetime
-from base.models import TenderResponse
+from base.models import TenderResponse, Tender
 from platforms import get_platform, get_all_platforms, REGISTERED_PLATFORMS
 
 # Supabase integration

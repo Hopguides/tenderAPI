@@ -74,6 +74,7 @@ class BonfirePlatform(BasePlatform):
                 return TenderResponse(
                     platform=self.platform_name,
                     total_count=len(results),
+                    tenders=[],  # Will be populated from results via backward compatibility
                     results=results,
                     query_info={
                         "search_params": search_request.dict(exclude_none=True),

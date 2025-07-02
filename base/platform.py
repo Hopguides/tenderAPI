@@ -83,7 +83,7 @@ class BasePlatform(ABC):
         return TenderResponse(
             platform=self.platform_name,
             total_count=0,
-            results=[],
+            tenders=[],
             query_info={"error": error_msg},
             status="error",
             error=error_msg

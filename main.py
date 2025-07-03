@@ -528,6 +528,102 @@ async def get_search_logs(limit: int = 50):
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
+@app.get("/latest-tenders")
+async def get_latest_tenders(limit: int = 10):
+    """Get latest tenders from all platforms without search criteria"""
+    start_time = time.time()
+    
+    try:
+        results = {}
+        total_tenders = 0
+        
+        # Get current date for SAM.gov (required parameters)
+        from datetime import datetime, timedelta
+        today = datetime.now()
+        thirty_days_ago = today - timedelta(days=30)
+        
+        # Define platform-specific parameters for latest tenders
+        platform_params = {
+            "sam": {
+                "posted_from": thirty_days_ago.strftime("%Y-%m-%d"),
+                "posted_to": today.strftime("%Y-%m-%d"),
+                "limit": limit
+            },
+            "ted": {
+                "limit": limit
+            },
+            "bonfire": {
+                "limit": limit
+            }
+        }
+        
+        # Search each platform
+        for platform_name, params in platform_params.items():
+            try:
+                platform = get_platform(platform_name)
+                result = await platform.search(**params)
+                
+                # Store results
+                results[platform_name] = {
+                    "status": "success",
+                    "total_count": result.total_count,
+                    "tenders": result.tenders[:limit] if result.tenders else [],
+                    "platform_info": {
+                        "name": result.platform,
+                        "search_params": params
+                    }
+                }
+                
+                total_tenders += len(result.tenders) if result.tenders else 0
+                
+                # Save to Supabase (async, don't block response)
+                asyncio.create_task(save_tender_results(
+                    platform_name=platform_name,
+                    search_params=params,
+                    results=result,
+                    execution_time=time.time() - start_time
+                ))
+                
+            except Exception as e:
+                logger.error(f"Error fetching latest tenders from {platform_name}: {e}")
+                results[platform_name] = {
+                    "status": "error",
+                    "error": str(e),
+                    "total_count": 0,
+                    "tenders": [],
+                    "platform_info": {
+                        "name": platform_name,
+                        "search_params": params
+                    }
+                }
+        
+        execution_time = time.time() - start_time
+        
+        return {
+            "status": "success",
+            "message": f"Retrieved latest tenders from {len(platform_params)} platforms",
+            "execution_time": round(execution_time, 3),
+            "total_tenders": total_tenders,
+            "platforms": results,
+            "metadata": {
+                "timestamp": datetime.now().isoformat(),
+                "requested_limit": limit,
+                "platforms_queried": list(platform_params.keys()),
+                "supabase_storage": {
+                    "enabled": any([
+                        config.ENABLE_SAM_STORAGE,
+                        config.ENABLE_TED_STORAGE,
+                        config.ENABLE_BONFIRE_STORAGE
+                    ]),
+                    "connected": get_supabase().is_connected()
+                }
+            }
+        }
+        
+    except Exception as e:
+        logger.error(f"Error in get_latest_tenders: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
 if __name__ == "__main__":
     import uvicorn
     uvicorn.run(app, host="0.0.0.0", port=8000)

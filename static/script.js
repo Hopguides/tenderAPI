@@ -328,7 +328,6 @@ class TenderAPITester {
             <span>${message}</span>
         `;
     }
-
     clearResults() {
         const content = document.getElementById('resultsContent');
         content.innerHTML = `
@@ -337,13 +336,123 @@ class TenderAPITester {
                 Results cleared. Ready for new tests.
             </div>
         `;
-        this.updateStatus('Ready', 'warning');
+    }
+
+    async getLatestTenders() {
+        const content = document.getElementById('resultsContent');
+        content.innerHTML = `
+            <div class="loading-message">
+                <i class="fas fa-clock fa-spin"></i> 
+                Fetching latest tenders from all platforms...
+            </div>
+        `;
+        
+        try {
+            const startTime = performance.now();
+            const response = await fetch(`${this.baseURL}/latest-tenders?limit=10`);
+            const endTime = performance.now();
+            
+            if (!response.ok) {
+                throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+            }
+            
+            const data = await response.json();
+            
+            // Display results
+            let html = `
+                <div class="latest-tenders-header">
+                    <h3><i class="fas fa-clock"></i> Latest Tenders from All Platforms</h3>
+                    <div class="summary-stats">
+                        <span class="stat"><i class="fas fa-stopwatch"></i> ${data.execution_time}s</span>
+                        <span class="stat"><i class="fas fa-file-alt"></i> ${data.total_tenders} tenders</span>
+                        <span class="stat"><i class="fas fa-globe"></i> ${Object.keys(data.platforms).length} platforms</span>
+                    </div>
+                </div>
+            `;
+            
+            // Display results for each platform
+            for (const [platformName, platformData] of Object.entries(data.platforms)) {
+                const statusIcon = platformData.status === 'success' ? '✅' : '❌';
+                const statusClass = platformData.status === 'success' ? 'success' : 'error';
+                
+                html += `
+                    <div class="platform-results ${statusClass}">
+                        <h4>${statusIcon} ${platformData.platform_info?.name || platformName.toUpperCase()}</h4>
+                `;
+                
+                if (platformData.status === 'success') {
+                    html += `
+                        <div class="platform-summary">
+                            <span>Found: ${platformData.total_count} tenders</span>
+                            <span>Showing: ${platformData.tenders.length} latest</span>
+                        </div>
+                    `;
+                    
+                    if (platformData.tenders && platformData.tenders.length > 0) {
+                        html += '<div class="tender-list">';
+                        platformData.tenders.forEach((tender, index) => {
+                            html += `
+                                <div class="tender-item">
+                                    <div class="tender-header">
+                                        <span class="tender-number">#${index + 1}</span>
+                                        <span class="tender-title">${tender.title || tender.name || 'No title'}</span>
+                                    </div>
+                                    <div class="tender-details">
+                                        ${tender.department ? `<span><i class="fas fa-building"></i> ${tender.department}</span>` : ''}
+                                        ${tender.posted_date ? `<span><i class="fas fa-calendar"></i> ${tender.posted_date}</span>` : ''}
+                                        ${tender.response_deadline ? `<span><i class="fas fa-clock"></i> Deadline: ${tender.response_deadline}</span>` : ''}
+                                        ${tender.solicitation_number ? `<span><i class="fas fa-hashtag"></i> ${tender.solicitation_number}</span>` : ''}
+                                    </div>
+                                    ${tender.url ? `<a href="${tender.url}" target="_blank" class="tender-link">View Details <i class="fas fa-external-link-alt"></i></a>` : ''}
+                                </div>
+                            `;
+                        });
+                        html += '</div>';
+                    } else {
+                        html += '<p class="no-results">No tenders found</p>';
+                    }
+                } else {
+                    html += `<div class="error-message">❌ Error: ${platformData.error}</div>`;
+                }
+                
+                html += '</div>';
+            }
+            
+            // Add metadata
+            html += `
+                <div class="metadata">
+                    <h4><i class="fas fa-info-circle"></i> Request Metadata</h4>
+                    <div class="metadata-grid">
+                        <span>Timestamp: ${new Date(data.metadata.timestamp).toLocaleString()}</span>
+                        <span>Platforms: ${data.metadata.platforms_queried.join(', ')}</span>
+                        <span>Supabase Storage: ${data.metadata.supabase_storage.enabled ? '✅ Enabled' : '❌ Disabled'}</span>
+                        <span>Database Connected: ${data.metadata.supabase_storage.connected ? '✅ Yes' : '❌ No'}</span>
+                    </div>
+                </div>
+            `;
+            
+            content.innerHTML = html;
+            
+        } catch (error) {
+            console.error('Latest tenders error:', error);
+            content.innerHTML = `
+                <div class="error-message">
+                    <i class="fas fa-exclamation-triangle"></i>
+                    <h3>Error</h3>
+                    <p>Failed to fetch latest tenders: ${error.message}</p>
+                </div>
+            `;
+        }
     }
 }
 
 // Global functions for quick actions
 function testHealth() {
     window.testerApp.testHealth();
+}
+
+function getLatestTenders() {
+    window.testerApp.getLatestTenders();
 }
 
 function testAllPlatforms() {
